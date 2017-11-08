@@ -39,5 +39,6 @@ int main(int argc,char *argv[])
     MPI_Allreduce( &norm, &totalnorm, 1, MPI_DOUBLE, MPI_SUM,MPI_COMM_WORLD );
 
     printf("rank %d : %f\n",rank,totalnorm);
+    MPI_Finalize();
 
 }
