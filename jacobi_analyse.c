@@ -3,7 +3,6 @@
 #include "mpi.h"
 
 /* This example handles a 12 x 12 mesh, on 4 processors only. */
-#define maxn 12
 
 int main(int argc,char *argv[])
 {
@@ -22,19 +21,16 @@ int main(int argc,char *argv[])
 
     if (size != 4) MPI_Abort( MPI_COMM_WORLD, 1 );
 
-    //printf("myrank : %d\n", rank);
     MPI_File_open(MPI_COMM_WORLD, filename,MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
     MPI_File_get_size(fh, &total_number_of_bytes);
     my_offset = (MPI_Offset) rank * total_number_of_bytes/size;
-    //printf("%3d: my offset = %lld\n", rank, my_offset);
     MPI_File_seek(fh, my_offset, MPI_SEEK_SET);
     MPI_File_read(fh,xlocal, 3*12, MPI_DOUBLE, &status);
-    //printf("rank %d : %f  %f \n",rank,xlocal[0][0], xlocal[2][11]);
-    MPI_File_close(&fh);   
+    MPI_File_close(&fh);
 
     for(i=0;i<3;i++)
-      for(j=0;j<12;j++)
-         norm+= xlocal[i][j]*xlocal[i][j];
+        for(j=0;j<12;j++)
+            norm+= xlocal[i][j]*xlocal[i][j];
 
     MPI_Allreduce( &norm, &totalnorm, 1, MPI_DOUBLE, MPI_SUM,MPI_COMM_WORLD );
 
