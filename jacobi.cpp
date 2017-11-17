@@ -1,6 +1,14 @@
+#include <decaf/decaf.hpp>
+#include <bredala/data_model/pconstructtype.h>
+#include <bredala/data_model/arrayconstructdata.hpp>
+#include <cci.h>
+#include <bredala/data_model/boost_macros.h>
+
 #include <stdio.h>
 #include <math.h>
 #include "mpi.h"
+#include <cstdlib>
+#include <string>
 
 /* This example handles a 12 x 12 mesh, on 4 processors only. */
 #define maxn 12
@@ -12,12 +20,26 @@ int main(int argc, char ** argv )
     MPI_Status status;
     MPI_File fh;
     MPI_Offset my_offset,my_current_offset;
-    char filename[6] = "x.mat";
     double diffnorm, gdiffnorm, norm;
     double xlocal[(12/4)+2][12];
     double xnew[(12/4)+2][12];
 
+    // Prepare transport
     MPI_Init( &argc, &argv );
+    uint32_t caps	= 0;
+    int ret = cci_init(CCI_ABI_VERSION, 0, &caps);
+    if (ret)
+    {
+        fprintf(stderr, "cci_init() failed with %s\n", cci_strerror(NULL, (cci_status)ret));
+        exit(EXIT_FAILURE);
+    }
+
+    // Load workflow that describes job network
+    Workflow workflow;
+    Workflow::make_wflow_from_json(workflow, "linear2.json");
+
+    // Prepare Decaf
+    Decaf* decaf = new Decaf(MPI_COMM_WORLD, workflow);
 
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     MPI_Comm_size( MPI_COMM_WORLD, &size );
@@ -78,12 +100,36 @@ int main(int argc, char ** argv )
             printf( "At iteration %d, diff is %e\n", itcnt, gdiffnorm );
     } while (gdiffnorm > 1.0e-2 && itcnt < 100);
 
-    my_offset = (long long) rank*3*12*8;
-    MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_CREATE | MPI_MODE_RDWR, MPI_INFO_NULL, &fh);
-    MPI_File_seek(fh, my_offset, MPI_SEEK_SET);
-    MPI_File_get_position(fh, &my_current_offset);
-    MPI_File_write(fh, &xlocal[1][0], 3*12, MPI_DOUBLE, &status);
-    MPI_File_close(&fh);
+
+    // Print array head for debug
+    std::string row;
+    for (i=1; i<=3; i++)
+    {
+        row = "";
+        for (j=0; j<12; j++)
+          row += std::to_string(xlocal[i][j]) + ", ";
+        fprintf(stderr, "rank %d: %s\n", rank, row.c_str());
+    }
+
+    // Prepare data in Decaf container
+    pConstructData container;
+    std::shared_ptr<ArrayConstructData<double> > arrayData =
+            std::make_shared<ArrayConstructData<double> >(
+                &xlocal[1][0], 3*12, 12, false);
+    container->appendData("array", arrayData,
+                          DECAF_NOFLAG, DECAF_PRIVATE,
+                          DECAF_SPLIT_DEFAULT, DECAF_MERGE_APPEND_VALUES);
+
+    // Send the data on all outbound dataflows
+    decaf->put(container);
+
+    // Terminate the producer
+    fprintf(stderr, "producer %d terminating\n", decaf->world->rank());
+    decaf->terminate();
+
+    // Clean Decaf
+    delete decaf;
+
     MPI_Finalize( );
     return 0;
 }
