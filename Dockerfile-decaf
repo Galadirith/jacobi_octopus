@@ -1,0 +1,71 @@
+FROM ubuntu:latest
+MAINTAINER Edward Fauchon-Jones <edward.fauchon.jones@gmail.com>
+
+RUN apt-get update -yqqq
+
+RUN apt-get install -yqqq git
+RUN apt-get install -yqqq cmake
+RUN apt-get install -yqqq python-pip
+RUN apt-get install -yqqq wget
+
+# Minimum OpenMPI version: 1.8
+RUN apt-get install -yqqq openmpi-common
+RUN apt-get install -yqqq openmpi-bin
+RUN apt-get install -yqqq libopenmpi-dev
+
+RUN cd $HOME \
+ && mkdir software \
+ && cd software \
+ && mkdir install
+
+# Boost
+RUN cd $HOME/software \
+ && wget https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz \
+ && tar -xf boost_1_64_0.tar.gz \
+ && cd boost_1_64_0 \
+ && ./bootstrap.sh --prefix=$HOME/software/install/ \
+ && ./b2 install
+
+# CCI
+RUN cd $HOME/software \
+ && wget http://cci-forum.com/wp-content/uploads/2017/05/cci-2.1.tar.gz \
+ && tar -xf cci-2.1.tar.gz \
+ && cd cci-2.1 \
+ && ./configure --prefix=$HOME/software/install \
+ && make -j4 install
+
+# Parallel HDF5
+RUN apt-get update -yqqq \
+ && apt-get install -yqqq libhdf5-openmpi-dev
+
+# NetworkX
+RUN cd $HOME/software \
+ && git clone https://github.com/networkx/networkx.git \
+ && cd networkx \
+ && git checkout networkx-1.11 \
+ && pip install .
+
+# Prepare decaf build environment
+RUN mkdir -p $HOME/opt/decaf/
+ENV PATH /root/software/install/include:/root/software/install/bin:$PATH
+ENV LD_LIBRARY_PATH /root/software/install/lib:$LD_LIBRARY_PATH
+ENV BOOST_ROOT /root/software/install/
+ENV BOOST_INCLUDE /root/software/install/include/
+ENV BOOST_LIBDIR /root/software/install/lib/
+
+# Install decaf
+RUN cd $HOME/software \
+ && git clone https://bitbucket.org/tpeterka1/decaf.git \
+ && cd decaf \
+ && cmake . \
+    -Dtransport_mpi=on \
+    -Dtransport_cci=on \
+    -Dtransport_file=off \
+    -DCMAKE_INSTALL_PREFIX=$HOME/opt/decaf/ \
+    -DCCI_PREFIX:PATH=$HOME/software/install \
+ && make -j 4 \
+ && make install
+
+# Prepare decaf environment
+ENV DECAF_PREFIX /root/opt/decaf/
+ENV LD_LIBRARY_PATH /root/opt/decaf/lib:$LD_LIBRARY_PATH
