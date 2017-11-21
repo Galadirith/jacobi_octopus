@@ -46,14 +46,11 @@ int main(int argc,char *argv[])
     vector< pConstructData > in_data;
     while (decaf->get(in_data))
     {
-        for (i = 0; i < in_data.size(); i++)
-        {
-            std::shared_ptr<ArrayConstructData<double> > arrayData =
-                in_data[i]->getTypedData<ArrayConstructData<double> >("array");
-            double* xlocal = arrayData->getArray();
-            for(j=0;j<36;j++)
-                norm+= xlocal[j]*xlocal[j];
-        }
+        std::shared_ptr<ArrayConstructData<double> > arrayData =
+            in_data[i]->getTypedData<ArrayConstructData<double> >("array");
+        double* xlocal = arrayData->getArray();
+        for(j=0;j<36;j++)
+            norm+= xlocal[j]*xlocal[j];
     }
 
     MPI_Allreduce( &norm, &totalnorm, 1, MPI_DOUBLE, MPI_SUM,MPI_COMM_WORLD );
