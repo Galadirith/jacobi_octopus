@@ -1,0 +1,13 @@
+FROM ubuntu:latest
+MAINTAINER Edward Fauchon-Jones <edward.fauchon.jones@gmail.com>
+
+RUN apt-get update -yqq
+
+RUN apt-get install -yqqq git
+RUN apt-get install -yqqq cmake
+RUN apt-get install -yqqq python-pip
+RUN apt-get install -yqqq wget
+RUN apt-get install -yqqq doxygen graphviz
+RUN apt-get install -yqqq vim
+RUN apt-get install -yqqq less
+RUN apt-get install -yqqq man
