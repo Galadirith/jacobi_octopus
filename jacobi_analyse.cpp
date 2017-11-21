@@ -46,24 +46,11 @@ int main(int argc,char *argv[])
     vector< pConstructData > in_data;
     while (decaf->get(in_data))
     {
-        fprintf(stderr, "size in_data: %lu\n", in_data.size());
         for (i = 0; i < in_data.size(); i++)
         {
             std::shared_ptr<ArrayConstructData<double> > arrayData =
                 in_data[i]->getTypedData<ArrayConstructData<double> >("array");
             double* xlocal = arrayData->getArray();
-
-            // Print array head for debug
-            std::string row;
-            for (i=0; i<3; i++)
-            {
-                row = "";
-                for (j=0; j<12; j++)
-                  row += std::to_string(xlocal[i*12 + j]) + ", ";
-                fprintf(stderr, "rank %d: %s\n", rank, row.c_str());
-            }
-
-            fprintf(stderr, "size xlocal: %d\n", arrayData->getSize());
             for(j=0;j<36;j++)
                 norm+= xlocal[j]*xlocal[j];
         }

@@ -100,17 +100,6 @@ int main(int argc, char ** argv )
             printf( "At iteration %d, diff is %e\n", itcnt, gdiffnorm );
     } while (gdiffnorm > 1.0e-2 && itcnt < 100);
 
-
-    // Print array head for debug
-    std::string row;
-    for (i=1; i<=3; i++)
-    {
-        row = "";
-        for (j=0; j<12; j++)
-          row += std::to_string(xlocal[i][j]) + ", ";
-        fprintf(stderr, "rank %d: %s\n", rank, row.c_str());
-    }
-
     // Prepare data in Decaf container
     pConstructData container;
     std::shared_ptr<ArrayConstructData<double> > arrayData =
