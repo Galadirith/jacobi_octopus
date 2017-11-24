@@ -53,7 +53,7 @@ set                         (libraries
                              ${MANALA_LIBRARY}
                              ${Boost_LIBRARIES})
 
-add_executable              (jacobi                  jacobi.cpp)
-add_executable              (jacobi_analyse          jacobi_analyse.cpp)
+add_executable              (jacobi                  jacobi.cpp api.cpp)
+add_executable              (jacobi_analyse          jacobi_analyse.cpp api.cpp)
 target_link_libraries       (jacobi ${libraries})
 target_link_libraries       (jacobi_analyse ${libraries})

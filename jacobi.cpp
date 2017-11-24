@@ -1,9 +1,4 @@
-#include <decaf/decaf.hpp>
-#include <bredala/data_model/pconstructtype.h>
-#include <bredala/data_model/arrayconstructdata.hpp>
-#include <cci.h>
-#include <bredala/data_model/boost_macros.h>
-
+#include "api.hpp"
 #include <stdio.h>
 #include <math.h>
 #include "mpi.h"
@@ -26,20 +21,6 @@ int main(int argc, char ** argv )
 
     // Prepare transport
     MPI_Init( &argc, &argv );
-    uint32_t caps	= 0;
-    int ret = cci_init(CCI_ABI_VERSION, 0, &caps);
-    if (ret)
-    {
-        fprintf(stderr, "cci_init() failed with %s\n", cci_strerror(NULL, (cci_status)ret));
-        exit(EXIT_FAILURE);
-    }
-
-    // Load workflow that describes job network
-    Workflow workflow;
-    Workflow::make_wflow_from_json(workflow, "linear2.json");
-
-    // Prepare Decaf
-    Decaf* decaf = new Decaf(MPI_COMM_WORLD, workflow);
 
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     MPI_Comm_size( MPI_COMM_WORLD, &size );
@@ -100,24 +81,10 @@ int main(int argc, char ** argv )
             printf( "At iteration %d, diff is %e\n", itcnt, gdiffnorm );
     } while (gdiffnorm > 1.0e-2 && itcnt < 100);
 
-    // Prepare data in Decaf container
-    pConstructData container;
-    std::shared_ptr<ArrayConstructData<double> > arrayData =
-            std::make_shared<ArrayConstructData<double> >(
-                &xlocal[1][0], 3*12, 12, false);
-    container->appendData("array", arrayData,
-                          DECAF_NOFLAG, DECAF_PRIVATE,
-                          DECAF_SPLIT_DEFAULT, DECAF_MERGE_APPEND_VALUES);
-
     // Send the data on all outbound dataflows
-    decaf->put(container);
-
-    // Terminate the producer
-    fprintf(stderr, "producer %d terminating\n", decaf->world->rank());
-    decaf->terminate();
-
-    // Clean Decaf
-    delete decaf;
+    Octopus *octopus = new Octopus();
+    octopus->putArray(&xlocal[1][0], 3*12, 12);
+    delete octopus;
 
     MPI_Finalize( );
     return 0;

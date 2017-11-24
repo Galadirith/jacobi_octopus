@@ -1,9 +1,4 @@
-#include <decaf/decaf.hpp>
-#include <bredala/data_model/pconstructtype.h>
-#include <bredala/data_model/arrayconstructdata.hpp>
-#include <cci.h>
-#include <bredala/data_model/boost_macros.h>
-
+#include "api.hpp"
 #include <stdio.h>
 #include <math.h>
 #include "mpi.h"
@@ -23,46 +18,34 @@ int main(int argc,char *argv[])
 
     // Prepare transport
     MPI_Init( &argc, &argv );
-    uint32_t caps	= 0;
-    int ret = cci_init(CCI_ABI_VERSION, 0, &caps);
-    if (ret)
-    {
-        fprintf(stderr, "cci_init() failed with %s\n", cci_strerror(NULL, (cci_status)ret));
-        exit(EXIT_FAILURE);
-    }
-
-    // Load workflow that describes job network
-    Workflow workflow;
-    Workflow::make_wflow_from_json(workflow, "linear2.json");
-
-    // Prepare Decaf
-    Decaf* decaf = new Decaf(MPI_COMM_WORLD, workflow);
 
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     MPI_Comm_size( MPI_COMM_WORLD, &size );
 
     if (size != 4) MPI_Abort( MPI_COMM_WORLD, 1 );
 
-    vector< pConstructData > in_data;
-    while (decaf->get(in_data))
-    {
-        std::shared_ptr<ArrayConstructData<double> > arrayData =
-            in_data[i]->getTypedData<ArrayConstructData<double> >("array");
-        double* xlocal = arrayData->getArray();
-        for(j=0;j<36;j++)
+    double *xlocal;
+    Octopus *octopus = new Octopus();
+    while (!octopus->getArray(&xlocal)) {
+        for(j=0;j<36;j++) {
             norm+= xlocal[j]*xlocal[j];
+        }
     }
+    
+    // Print array head for debug
+    std::string row;
+    for (int i=0; i<3; i++)
+    {
+        row = "";
+        for (int j=0; j<12; j++)
+          row += std::to_string(xlocal[i*12 + j]) + ", ";
+        fprintf(stderr, "rank: %s\n", row.c_str());
+    }
+    delete octopus;
 
     MPI_Allreduce( &norm, &totalnorm, 1, MPI_DOUBLE, MPI_SUM,MPI_COMM_WORLD );
 
     printf("rank %d : %f\n",rank,totalnorm);
-
-    // Terminate the consumer
-    fprintf(stderr, "consumer %d terminating\n", decaf->world->rank());
-    decaf->terminate();
-
-    // Clean Decaf
-    delete decaf;
 
     MPI_Finalize();
 
